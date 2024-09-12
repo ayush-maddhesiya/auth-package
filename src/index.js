@@ -4,14 +4,14 @@ import app from './app.js';
 
 dotenv.config("./.env");
 
-const start = async () => {
+const start = async (uri,dbname) => {
 
-  if (!process.env.MONGO_URI || undefined === process.env.MONGO_URI) {
+  if (!uri || undefined === uri) {
     throw new Error('MONGO_URI must be defined');
   }
 
   try {
-    await mongoose.connect(`${process.env.MONGO_URI}/${process.env.MONGO_DB}`);
+    await mongoose.connect(`${uri}/${dbname}`);
     console.log('Connected to MongoDB');
   } catch (err) {
     console.error(err.message);
@@ -23,6 +23,6 @@ const start = async () => {
   });
 };
 
-start();
+start(process.env.MONGO_URI,process.env.MONGO_DB);
 
 // export default start;
