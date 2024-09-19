@@ -10,8 +10,11 @@ import bcrypt from 'bcrypt';
 
 const verifyEmailToken = asyncHandler(async (req, res) => {
   //please why res.params is not working.
-  const { token } = req.body;
+  // const { token } = req.body;
+  //take input from params
+  const { token} = req.params;
   console.log("token", token);
+  console.log(" req.user", req);
   
   if(!token) 
     throw new ApiError(400, 'Token is required');
