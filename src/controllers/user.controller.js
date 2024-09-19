@@ -1,10 +1,10 @@
 
 import mongoose from 'mongoose';
-import {User} from '../models/user.model.js';
-import {v4 as uuid} from 'uuid';
-import {ApiError} from '../utils/ApiError.js';
-import {ApiResponse} from '../utils/ApiResponse.js';
-import {asyncHandler} from '../utils/AsyncHandler.js';
+import { User } from '../models/user.model.js';
+import { v4 as uuid } from 'uuid';
+import { ApiError } from '../utils/ApiError.js';
+import { ApiResponse } from '../utils/ApiResponse.js';
+import { asyncHandler } from '../utils/AsyncHandler.js';
 import bcrypt from 'bcrypt';
 
 
@@ -12,20 +12,20 @@ const verifyEmailToken = asyncHandler(async (req, res) => {
   //please why res.params is not working.
   // const { token } = req.body;
   //take input from params
-  const { token} = req.params;
+  const { token } = req.params;
   console.log("token", token);
   console.log(" req.user", req);
-  
-  if(!token) 
+
+  if (!token)
     throw new ApiError(400, 'Token is required');
 
   const tokenString = token.toString();
 
   console.log("Token fomr verify email", tokenString);
-  
+
   const user = await User.findOne({ verificationToken: tokenString });
 
-  if (!user) 
+  if (!user)
     throw new Error('Invalid token, plesse provide valid token to verify email');
 
   user.isVerified = true;
@@ -33,21 +33,21 @@ const verifyEmailToken = asyncHandler(async (req, res) => {
 
   await user.save();
 
-  return  res.status(200).json(new ApiResponse(200, 'Email verified successfully', user));
+  return res.status(200).json(new ApiResponse(200, 'Email verified successfully', user));
 })
 
 
 
 const generateAccessTokenandRefreshToken = async (userId) => {
   try {
-   
-    
+
+
     const user = await User.findById(userId);
     if (!user) throw new ApiError(404, "User not found");
 
-    
-    const accessToken =  await user.generateAccessToken();
-    const refreshToken =  await user.generateRefreshToken();
+
+    const accessToken = await user.generateAccessToken();
+    const refreshToken = await user.generateRefreshToken();
 
     user.refreshToken = refreshToken;
     user.accessToken = accessToken;
@@ -61,101 +61,102 @@ const generateAccessTokenandRefreshToken = async (userId) => {
 
 const login = asyncHandler(async (req, res, next) => {
   const { email, username, password } = req.body;
-  
+
   try {
     if (username === undefined || password === undefined || email === undefined) {
       throw new ApiError(400, 'Please provide username,email and password , it is undefined');
     }
-  
+
     const user = await User.findOne({
       $or: [{ email }, { username }]
     }).select('+password +isVerified');
     console.log("user", user);
-    
+
     if (!user) {
       throw new ApiError(400, "User Not found")
-    }  
-    
-    if (!user.isVerified) {
-      throw new ApiError(400, "Please verify your email") 
     }
-    
-    const isPasswordCorrect = await user.isPasswordCorrect(password) 
+
+    if (!user.isVerified) {
+      throw new ApiError(400, "Please verify your email")
+    }
+
+    const isPasswordCorrect = await user.isPasswordCorrect(password)
 
     if (!isPasswordCorrect) {
       throw new ApiError(404, "Incorrect Password")
     }
-    
 
-    
+
+
     const { accessToken, refreshToken } = await generateAccessTokenandRefreshToken(user._id.toString());
 
 
-    
-    
-    
+
+
+
     res.cookies("refreshToken", refreshToken, {
       httpOnly: true,
       secure: true,
       sameSite: "none",
     })
-  
+
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: true,
       sameSite: "none",
     })
-    
+
     return res.status(200).json(new ApiResponse(200, "Logged in successfully", { accessToken, refreshToken }));
-  
+
   } catch (error) {
-    throw new ApiError(500, error.message || "Something went wrong while logging in"); 
+    throw new ApiError(500, error.message || "Something went wrong while logging in");
   }
 });
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { fullName, email, password, role,username } = req.body;
+  const { fullName, email, password, role, username } = req.body;
 
-  if (fullName === undefined || email === undefined || password === undefined || role === undefined) { 
+  if (fullName === undefined || email === undefined || password === undefined || role === undefined) {
     throw new ApiError(400, 'Please provide username,email and password , it is undefined');
   }
 
-  if(role !== "user" && role !== "admin"){
+  if (role !== "user" && role !== "admin") {
     throw new ApiError(400, "Invalid role")
   }
 
   const userexits = await User.findOne({
-    $or: [{ email }, { username }]}
+    $or: [{ email }, { username }]
+  }
   );
 
-  
 
-  if(userexits){
+
+  if (userexits) {
     throw new ApiError(400, "User already exists")
   }
 
   // console.debug(`Creating user with email: ${email}, username: ${username}`);
 
-  
+
   const hashedPassword = await bcrypt.hash(password, 10);
   const user = await User.create({
-    fullName, 
-    email, 
-    password, 
-    role, 
+    fullName,
+    email,
+    password,
+    role,
     username,
     password: hashedPassword,
-    verificationToken : uuid(),
+    verificationToken: uuid(),
     // verificationToken:  verifyEmailToken
   });
-  
+
   const { accessToken, refreshToken } = await generateAccessTokenandRefreshToken(user._id);
   // const verifyEmailToken = user.createPasswordResetToken();
-  res.cookie("refreshToken", refreshToken, {  
+  res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: true,
     sameSite: "none",
-  })  
+  })
 
   res.cookie("accessToken", accessToken, {
     httpOnly: true,
@@ -184,13 +185,13 @@ const logOut = asyncHandler(async (req, res) => {
 
 const forgetPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
-  if(!email){
+  if (!email) {
     throw new ApiError(400, "Please provide email")
   }
 
-  const user = await user.findOne({email})
+  const user = await user.findOne({ email })
 
-  if(!user){
+  if (!user) {
     throw new ApiError(400, "User not found")
   }
 
@@ -198,7 +199,7 @@ const forgetPassword = asyncHandler(async (req, res) => {
   await user.save({ validateBeforeSave: false });
 
   const resetURL = `${process.env.FRONTEND_URL}/reset-password?resetToken=${resetToken}`;
-  
+
   const message = `Click on the link below to reset your password. \n\n ${resetURL}`;
   try {
     await sendEmail({
@@ -220,25 +221,36 @@ const forgetPassword = asyncHandler(async (req, res) => {
 
 
 const resetPassword = asyncHandler(async (req, res) => {
-  
-  const { oldPassword , newPassword} = req.body;
+
+  const { email, oldPassword, newPassword } = req.body;
   try {
-    if(oldPassword === undefined ||  newPassword === undefined){
-      throw new ApiError(301,"Please provide old password and new password")
+    if (!email) {
+      throw new ApiError(400, "Please provide email")
     }
-    if(oldPassword === newPassword){
-      throw new ApiError(403,"New password cannot be same as old password")
+
+    const user = await User.findOne({ email })
+
+    if (!user) {
+      throw new ApiError(400, "User not found")
     }
-  
+    if (oldPassword === undefined || newPassword === undefined) {
+      throw new ApiError(301, "Please provide old password and new password")
+    }
+    if (oldPassword === newPassword) {
+      throw new ApiError(403, "New password cannot be same as old password")
+    }
+
     const isPasswordCorrect = user.isPasswordCorrect(oldPassword);
-    if(!isPasswordCorrect){
-      throw new ApiError(401,"Password is incorrect")
+    if (!isPasswordCorrect) {
+      throw new ApiError(401, "Password is incorrect")
     }
-    const newHashedPassword = await bcrypt.hash(newPassword,10);
-    const user = req.user._id;
+    const newHashedPassword = await bcrypt.hash(newPassword, 10);
+
     const updatedUser = User.findByIdAndUpdate(user, {
       password: newHashedPassword
     })
+
+    await updatedUser.save();
 
     return res.status(200).json(new ApiResponse(200, "Password reset successfully", updatedUser)
     )
@@ -246,12 +258,31 @@ const resetPassword = asyncHandler(async (req, res) => {
     new ApiError(500, error.message || "Something went wrong while resetting the password");
   }
 
-}) 
+})
 
-// export const verifyEmail = (req, res) => {
-//   // Logic to verify the user's email
+const verifyEmail = asyncHandler(async (req, res) => {
+  // Logic to verify the user's email
+  const { email } = req.body
 
-// };
+  try {
+    if (!email) {
+      throw new ApiError(400, "Please provide email")
+    }
+  
+    const user = await User.findOne({ email })
+  
+    if (!user) {
+      throw new ApiError(400, "User not found")
+    }
+  
+    return res.status(200).json(new ApiResponse(200, "Email verified successfully", user))
+  } catch (error) {
+    throw new ApiError(500, error.message || "Something went wrong while verifying the email");
+  }
+
+});
+
+
 
 export {
   login,
