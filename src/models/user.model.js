@@ -44,7 +44,7 @@ const userSchema = new Schema({
   },
   verificationToken: {
     type: String,
-    required: true
+    required: false
   },
   passwordResetToken: {
     type: String

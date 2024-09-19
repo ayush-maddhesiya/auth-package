@@ -26,7 +26,7 @@ const verifyEmailToken = asyncHandler(async (req, res) => {
     throw new Error('Invalid token, plesse provide valid token to verify email');
 
   user.isVerified = true;
-  user.verificationToken = undefined;
+  user.verificationToken = null;
 
   await user.save();
 
