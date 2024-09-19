@@ -1,6 +1,8 @@
 import mongoose,{Schema} from 'mongoose';
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
+import dotenv from 'dotenv'
+dotenv.config();
 
 const userSchema = new Schema({
   username: {
@@ -41,7 +43,8 @@ const userSchema = new Schema({
     default: false
   },
   verificationToken: {
-    type: String
+    type: String,
+    required: true
   },
   passwordResetToken: {
     type: String
@@ -60,7 +63,7 @@ userSchema.pre('save',async function (next){
   next();
 })
 
-userSchema.methods.isPasswordCorrect = async function isPasswordCorrect(password) {
+userSchema.methods.isPasswordCorrect = async function(password) {
   return await bcrypt.compare(password,this.password)
 }
 

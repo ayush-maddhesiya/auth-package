@@ -1,11 +1,11 @@
 import express from 'express'
-import {loginUser} from '../controllers/user.controller.js'
 import {
   login,
   registerUser,
   logOut,
   resetPassword,
-  forgetPassword
+  forgetPassword,
+  verifyEmailToken
  } from "../controllers/user.controller.js"
 const router = express.Router();
 
@@ -15,7 +15,7 @@ router.post('/auth/register',registerUser );
 router.get('/auth/logout',logOut );
 router.post('/auth/reset-password',resetPassword );
 router.post('/auth/forget-password',forgetPassword );
-
+router.post("/auth/verityEmail",verifyEmailToken);
 
 router.post('/auth/loginuser', async (req, res) => {
   const { username, password } = req.body;

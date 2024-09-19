@@ -1,43 +1,51 @@
 
 import mongoose from 'mongoose';
 import {User} from '../models/user.model.js';
-
+import {v4 as uuid} from 'uuid';
 import {ApiError} from '../utils/ApiError.js';
 import {ApiResponse} from '../utils/ApiResponse.js';
 import {asyncHandler} from '../utils/AsyncHandler.js';
 import bcrypt from 'bcrypt';
-// import {} from '../models/user.model.js'
 
 
+const verifyEmailToken = asyncHandler(async (req, res) => {
+  //please why res.params is not working.
+  const { token } = req.body;
+  console.log("token", token);
+  
+  if(!token) 
+    throw new ApiError(400, 'Token is required');
 
-const loginUser = (username, password, usersDB) => {
-  const user = usersDB.find(u => u.username === username);
-  if (!user) throw new Error('User not found');
+  const tokenString = token.toString();
 
-  const isPasswordValid = bcrypt.compareSync(password, user.password);
-  if (!isPasswordValid) throw new Error('Invalid password');
+  console.log("Token fomr verify email", tokenString);
+  
+  const user = await User.findOne({ verificationToken: tokenString });
 
-  console.log('Secret Key:', config.secretKey); // Use local config
+  if (!user) 
+    throw new Error('Invalid token, plesse provide valid token to verify email');
 
-  return `Token for user: ${user.username}`;
-};
+  user.isVerified = true;
+  user.verificationToken = undefined;
+
+  await user.save();
+
+  return  res.status(200).json(new ApiResponse(200, 'Email verified successfully', user));
+})
+
+
 
 const generateAccessTokenandRefreshToken = async (userId) => {
   try {
-    console.log("userId", userId);
+   
     
     const user = await User.findById(userId);
-    console.log("user form generate tokens", user);
     if (!user) throw new ApiError(404, "User not found");
 
-    console.log("you are there after the user find form Db");
     
     const accessToken =  await user.generateAccessToken();
     const refreshToken =  await user.generateRefreshToken();
-    console.log("you are there after the user find form Db ALSO THIETE ");
 
-    console.log("accessToken", accessToken);
-    console.log("refreshToken", refreshToken);
     user.refreshToken = refreshToken;
     user.accessToken = accessToken;
     await user.save({ validateBeforeSave: false });
@@ -50,7 +58,6 @@ const generateAccessTokenandRefreshToken = async (userId) => {
 
 const login = asyncHandler(async (req, res, next) => {
   const { email, username, password } = req.body;
-  console.log("email, username, password", email, username, password);
   
   try {
     if (username === undefined || password === undefined || email === undefined) {
@@ -70,18 +77,18 @@ const login = asyncHandler(async (req, res, next) => {
       throw new ApiError(400, "Please verify your email") 
     }
     
-    const isPasswordCorrector = await user.isPasswordCorrect(password) 
-    
-    if (!isPasswordCorrector) {
+    const isPasswordCorrect = await user.isPasswordCorrect(password) 
+
+    if (!isPasswordCorrect) {
       throw new ApiError(404, "Incorrect Password")
     }
     
-    // console.log("user._id", user._id.toString());
-    console.log(await generateAccessTokenandRefreshToken(user._id.toString()));
+
     
     const { accessToken, refreshToken } = await generateAccessTokenandRefreshToken(user._id.toString());
-    console.log("accessToken, refreshToken", accessToken, refreshToken);
-    console.log("you are here");
+
+
+    
     
     
     res.cookies("refreshToken", refreshToken, {
@@ -117,7 +124,7 @@ const registerUser = asyncHandler(async (req, res) => {
   const userexits = await User.findOne({
     $or: [{ email }, { username }]}
   );
-  console.log(userexits);
+
   
 
   if(userexits){
@@ -135,9 +142,9 @@ const registerUser = asyncHandler(async (req, res) => {
     role, 
     username,
     password: hashedPassword,
+    verificationToken : uuid(),
     // verificationToken:  verifyEmailToken
   });
-  console.log("User ID: ",user.role);
   
   const { accessToken, refreshToken } = await generateAccessTokenandRefreshToken(user._id);
   // const verifyEmailToken = user.createPasswordResetToken();
@@ -238,10 +245,10 @@ const resetPassword = asyncHandler(async (req, res) => {
 
 }) 
 
-export const verifyEmail = (req, res) => {
-  // Logic to verify the user's email
+// export const verifyEmail = (req, res) => {
+//   // Logic to verify the user's email
 
-};
+// };
 
 export {
   login,
@@ -249,5 +256,5 @@ export {
   logOut,
   resetPassword,
   forgetPassword,
-  loginUser
+  verifyEmailToken
 }

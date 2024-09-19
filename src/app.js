@@ -15,7 +15,6 @@ app.use(cookieParser())
 
 import auth from './routes/user.route.js'
 app.use('/auth',auth);
-// console.log(auth);
 
 
 app.get("/hello", async (req, res) => {
